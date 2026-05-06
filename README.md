@@ -7,6 +7,12 @@ Zo Space demo that lets visitors speak to Zo through the browser and the Zo ask 
 - Page: `https://etok.zo.space/talk-with-zo`
 - API proxy: `https://etok.zo.space/api/talk-with-zo`
 
+![Talk With Your Zo demo screenshot](assets/talk-with-your-zo-demo.png)
+
+## Build Log
+
+- Built iteratively with Zo: https://www.zo.computer/chats/pub_MtAfCKBHYHMLb8bW
+
 ## Architecture
 
 ```mermaid
