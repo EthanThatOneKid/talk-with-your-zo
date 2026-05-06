@@ -42,6 +42,7 @@ function preparePrompt(input: string) {
 
 function extractTextFromEvent(eventText: string) {
   const lines = eventText.split(/\r?\n/);
+  const eventName = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
   let text = "";
 
   for (const line of lines) {
@@ -51,7 +52,13 @@ function extractTextFromEvent(eventText: string) {
 
     try {
       const parsed = JSON.parse(raw);
-      text += parsed.delta || parsed.output || parsed.text || parsed.message || "";
+      if (eventName === "PartStartEvent" && parsed.part?.part_kind === "text" && typeof parsed.part.content === "string") {
+        text += parsed.part.content;
+      } else if (!eventName && typeof parsed.delta === "string") text += parsed.delta;
+      else if (!eventName && typeof parsed.output === "string") text += parsed.output;
+      else if (!eventName && typeof parsed.text === "string") text += parsed.text;
+      else if (!eventName && typeof parsed.message === "string") text += parsed.message;
+      else if (eventName === "End") text += "";
     } catch {
       text += raw;
     }
@@ -135,14 +142,18 @@ export default function TalkWithZo() {
   }
 
   function speak(text: string) {
-    if (!voiceEnabled || !ttsSupported || !text) return;
+    if (!voiceEnabled || !ttsSupported || !text) {
+      setState("idle");
+      return;
+    }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.98;
     utterance.pitch = 1;
-    utterance.onstart = () => setState("speaking");
+    setState("speaking");
     utterance.onend = () => setState("idle");
     window.speechSynthesis.speak(utterance);
+    window.setTimeout(() => setState((current) => current === "speaking" ? "idle" : current), 12000);
   }
 
   async function askZo() {
@@ -209,9 +220,14 @@ export default function TalkWithZo() {
         setResponse(fullText);
       }
 
+      if (/^Error:/i.test(fullText.trim())) {
+        throw new Error(fullText.trim());
+      }
+
       speak(fullText);
       if (!voiceEnabled) setState("idle");
     } catch (err) {
+      setResponse("");
       setError(err instanceof Error ? err.message : "Zo request failed.");
       setState("error");
     }
